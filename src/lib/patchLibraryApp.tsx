@@ -18,7 +18,7 @@ const patchLibraryApp = () =>
           findInReactTree(reactTree, (value: any) => value?.props?.children?.props?.overview)?.props?.children,
       ],
       (_: Array<Record<string, unknown>>, ret?: ReactElement) => {
-        const alreadyInjected = findInReactTree(ret, (value: any) => value?.props?.['data-decky-game-settings-battery-badge'])
+        const alreadyInjected = findInReactTree(ret, (value: any) => value?.props?.['data-dgs-battery-badge'])
         if (alreadyInjected) {
           return ret
         }
@@ -38,8 +38,8 @@ const patchLibraryApp = () =>
           1,
           0,
           <GameBatteryBadge
-            key='decky-game-settings-battery-badge'
-            data-decky-game-settings-battery-badge
+            key='dgs-battery-badge'
+            data-dgs-battery-badge
           />
         )
 

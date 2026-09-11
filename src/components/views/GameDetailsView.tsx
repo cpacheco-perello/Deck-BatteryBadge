@@ -56,7 +56,7 @@ const GameDetailsView: React.FC<GameDetailsViewProps> = ({ gameName, appId, onGo
           setCurrentDeviceLabel(inferDeviceLabel(info))
         }
       } catch (error) {
-        console.warn('[decky-game-settings:GameDetailsView] Failed to infer device label:', error)
+        console.warn('[DGS-Battery:GameDetailsView] Failed to infer device label:', error)
         if (!cancelled) {
           setCurrentDeviceLabel(null)
         }

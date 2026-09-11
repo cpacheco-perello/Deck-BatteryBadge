@@ -30,7 +30,7 @@ import {
 } from './gameBatteryBadge/theme'
 
 type GameBatteryBadgeProps = {
-  'data-decky-game-settings-battery-badge'?: boolean
+  'data-dgs-battery-badge'?: boolean
 }
 
 const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
