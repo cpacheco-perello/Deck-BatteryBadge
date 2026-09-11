@@ -56,4 +56,6 @@ cli/*
 cli/decky
 
 
-steam-deck-battery-tracker
+# Local checkout of the battery tracker plugin, kept only as a reference
+# while wiring up the integration. It is its own git repo, never part of this one.
+steam-deck-battery-tracker/
