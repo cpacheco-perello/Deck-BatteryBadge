@@ -12,6 +12,8 @@ export type BadgeSizePreset = {
   buttonMinWidth: string
   buttonHeight: string
   buttonFontSize: string
+  collapsedPadding: string
+  collapsedFontSize: string
 }
 
 export type BatteryTone = {
@@ -34,6 +36,8 @@ export const sizePresets: Record<BatteryBadgeSize, BadgeSizePreset> = {
     buttonMinWidth: '72px',
     buttonHeight: '24px',
     buttonFontSize: '10px',
+    collapsedPadding: '4px 9px',
+    collapsedFontSize: '11px',
   },
   regular: {
     maxWidth: '320px',
@@ -46,6 +50,8 @@ export const sizePresets: Record<BatteryBadgeSize, BadgeSizePreset> = {
     buttonMinWidth: '86px',
     buttonHeight: '26px',
     buttonFontSize: '11px',
+    collapsedPadding: '5px 11px',
+    collapsedFontSize: '12px',
   },
   large: {
     maxWidth: '360px',
@@ -58,6 +64,8 @@ export const sizePresets: Record<BatteryBadgeSize, BadgeSizePreset> = {
     buttonMinWidth: '96px',
     buttonHeight: '28px',
     buttonFontSize: '12px',
+    collapsedPadding: '6px 13px',
+    collapsedFontSize: '14px',
   },
 }
 
@@ -95,6 +103,19 @@ export const cardBaseStyle: React.CSSProperties = {
   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
   display: 'flex',
   flexDirection: 'column',
+}
+
+// Resting state: a single pill with the reading and the draw, nothing else.
+export const collapsedCardBaseStyle: React.CSSProperties = {
+  borderRadius: '999px',
+  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
+  display: 'flex',
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: '6px',
+  whiteSpace: 'nowrap',
+  fontWeight: 600,
+  lineHeight: '14px',
 }
 
 export const titleRowStyle: React.CSSProperties = {

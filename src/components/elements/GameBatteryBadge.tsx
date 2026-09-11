@@ -4,6 +4,7 @@ import { MdBattery5Bar } from 'react-icons/md'
 import {
   batteryBadgeAverageTdpRange,
   formatMinutes,
+  formatMinutesCompact,
   getGameTdpOverrideWatts,
   getPluginConfig,
   makeGameTdpOverrideKey,
@@ -18,6 +19,7 @@ import { useBatteryTrackerTdp } from '../../hooks/useBatteryTrackerTdp'
 import { calculateEstimatedMinutesFromTdp, useDeviceBatteryProfile } from '../../hooks/useDeviceBatteryProfile'
 import {
   cardBaseStyle,
+  collapsedCardBaseStyle,
   containerBaseStyle,
   footerButtonsStyle,
   footerStyle,
@@ -39,6 +41,7 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   // A state-backed callback ref, not useRef: the visibility hook has to re-run
   // whenever this node is attached or detached.
   const [badgeNode, setBadgeNode] = useState<HTMLDivElement | null>(null)
+  const [isExpanded, setIsExpanded] = useState(false)
   const { validAppId, routeGameName, shouldPreferNameLookup } = useGameIdentity()
 
   const pluginConfig = getPluginConfig()
@@ -162,6 +165,24 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
     drawValue = 'Unavailable'
   }
 
+  // Collapsed reading, e.g. "1h42m / 7W". Either half can be missing.
+  const compactParts: string[] = []
+  if (summary.batteryLifeMinutes !== null) {
+    compactParts.push(formatMinutesCompact(summary.batteryLifeMinutes))
+  }
+  if (summary.averagePowerDraw) {
+    compactParts.push(summary.averagePowerDraw.replace(/\s+/g, ''))
+  }
+
+  let compactText = compactParts.join(' / ')
+  if (summary.isLoading) {
+    compactText = 'Loading...'
+  } else if (summary.hasError) {
+    compactText = 'Unavailable'
+  } else if (compactParts.length === 0) {
+    compactText = 'No data'
+  }
+
   let reportCountText = 'No reports found'
   if (summary.isLoading) {
     reportCountText = 'Loading report data...'
@@ -194,6 +215,25 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
     background: `linear-gradient(135deg, rgba(12, 18, 30, 0.95) 0%, ${tone.bgAccent} 100%)`,
   }
 
+  const collapsedCardStyle: React.CSSProperties = {
+    ...collapsedCardBaseStyle,
+    padding: sizePreset.collapsedPadding,
+    fontSize: sizePreset.collapsedFontSize,
+    color: tone.metricColor,
+    border: `1px solid ${tone.border}`,
+    background: `linear-gradient(135deg, rgba(12, 18, 30, 0.95) 0%, ${tone.bgAccent} 100%)`,
+  }
+
+  // Focus moving between the card and its own buttons fires a blur on the
+  // container. Only collapse when focus actually leaves the badge.
+  const handleBadgeBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+    const nextTarget = event.relatedTarget as Node | null
+    if (nextTarget && event.currentTarget.contains(nextTarget)) {
+      return
+    }
+    setIsExpanded(false)
+  }
+
   const buttonStyle: React.CSSProperties = {
     minWidth: sizePreset.buttonMinWidth,
     height: sizePreset.buttonHeight,
@@ -205,10 +245,23 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   return (
     <div ref={setBadgeNode} style={containerStyle}>
       {shouldHideBadge ? null : (
-      // Plain div, not a Focusable. Only the button row below takes focus, so
-      // the badge adds two stops to gamepad navigation instead of a nested
-      // container that competes with other plugins' injected badges.
-      <div style={cardStyle}>
+      // One Focusable for the whole badge, mounted in both states. It is the
+      // focus target while collapsed, and while expanded the two DialogButtons
+      // inside are focus targets of their own. Keeping the same node across the
+      // switch is what stops focus being lost and the badge oscillating.
+      <Focusable
+        style={isExpanded ? cardStyle : collapsedCardStyle}
+        flow-children='vertical'
+        onFocus={() => setIsExpanded(true)}
+        onBlur={handleBadgeBlur}
+      >
+        {!isExpanded ? (
+          <>
+            <MdBattery5Bar size={14} color={tone.iconColor} />
+            {compactText}
+          </>
+        ) : (
+          <>
         <div style={{ ...titleRowStyle, fontSize: sizePreset.titleFontSize, color: tone.titleColor }}>
           <MdBattery5Bar size={14} color={tone.iconColor} />
           DGS Battery
@@ -249,7 +302,9 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
 
         <div style={footerStyle}>
           <div style={secondaryTextStyle}>{reportCountText}</div>
-          <Focusable style={footerButtonsStyle} flow-children='horizontal'>
+          {/* A plain div: DialogButton is already a focus target, so wrapping
+              these in a second Focusable would nest containers for nothing. */}
+          <div style={footerButtonsStyle}>
             <DialogButton
               style={{ ...buttonStyle, minWidth: '70px', opacity: isTrackerPriorityMode ? 0.7 : 1 }}
               onClick={openPerGameTdpModal}
@@ -262,9 +317,11 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
             <DialogButton style={buttonStyle} onClick={openGameReport} disabled={!canOpenReport || summary.isLoading}>
               Reports
             </DialogButton>
-          </Focusable>
+          </div>
         </div>
-      </div>
+          </>
+        )}
+      </Focusable>
       )}
     </div>
   )

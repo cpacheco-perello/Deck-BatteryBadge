@@ -317,6 +317,20 @@ export const hasYoutubeLink = (text: string): boolean => {
   return regex.test(text)
 }
 
+// Short form for the collapsed badge, where the whole reading has to fit on one
+// line next to the power draw: 102 -> "1h42m", 120 -> "2h", 42 -> "42m".
+export const formatMinutesCompact = (minutes: number): string => {
+  if (minutes < 60) {
+    return `${minutes}m`
+  }
+  const hours = Math.floor(minutes / 60)
+  const remainingMins = minutes % 60
+  if (remainingMins === 0) {
+    return `${hours}h`
+  }
+  return `${hours}h${String(remainingMins).padStart(2, '0')}m`
+}
+
 export const formatMinutes = (minutes: number): string => {
   if (minutes < 60) {
     return `${minutes} ${minutes === 1 ? 'min' : 'mins'}`
