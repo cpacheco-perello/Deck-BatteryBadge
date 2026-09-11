@@ -1,13 +1,36 @@
-# Decky Game Settings Fork
+# DGS Battery
 
 [![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://streamingtech.co.nz/discord)
 
 This project is a community-maintained fork of the Deck Settings plugin for Decky Loader. It fetches and displays community-driven game compatibility and configuration reports directly from the [Deck Settings API](https://deckverified.games/). These reports, sourced from the open-source [game-reports-steamos repository](https://github.com/DeckSettings/game-reports-steamos), provide optimized performance tweaks, graphics settings, and compatibility information for handheld gaming devices like the Steam Deck.
 
+On top of the original plugin, this fork adds a battery badge on the game details page that estimates battery life from community reports, and can read per-game average power from the Battery Tracker plugin when it is installed.
+
 ## Features
 - Fetches game compatibility reports for devices like Steam Deck, ROG Ally, and others.
 - Provides configuration tips, performance tweaks, and compatibility ratings for individual games.
 - Allows users to search by game name or Steam App ID.
+- Shows an estimated battery life badge on the game page, pinned to the corner you choose.
+
+## Install
+
+Decky Loader installs plugins from a URL. Enable Developer Mode under Settings → General, then open the Developer tab and use **Install Plugin from URL**.
+
+Test builds, rebuilt on every push to `develop`:
+
+```
+https://github.com/cpacheco-perello/Deck-BatteryBadge/releases/download/develop-latest/dgs-battery.zip
+```
+
+Stable builds, published from `main`:
+
+```
+https://github.com/cpacheco-perello/Deck-BatteryBadge/releases/download/latest/dgs-battery.zip
+```
+
+Both links are permanent. The file behind each one is replaced by CI, so reinstalling from the same URL always gets the newest build of that branch.
+
+If you are coming from the original Deck Settings plugin, uninstall it first. The two used to share an identity in Decky, and older installs can leave a stale folder behind in `~/homebrew/plugins`.
 
 ## Developers
 
