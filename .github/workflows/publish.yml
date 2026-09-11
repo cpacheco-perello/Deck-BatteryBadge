@@ -53,6 +53,8 @@ jobs:
           cp -fv ./package.json ./out/${{ steps.prepare.outputs.plugin_name }}/
           cp -fv ./LICENSE ./out/${{ steps.prepare.outputs.plugin_name }}/
           cp -fv ./README.md ./out/${{ steps.prepare.outputs.plugin_name }}/
+          cp -fv ./main.py ./out/${{ steps.prepare.outputs.plugin_name }}/
+          cp -fv ./decky.pyi ./out/${{ steps.prepare.outputs.plugin_name }}/
           cp -rfv ./dist ./out/${{ steps.prepare.outputs.plugin_name }}/dist
 
       - name: zip/tar release
