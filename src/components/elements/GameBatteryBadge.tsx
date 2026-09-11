@@ -79,7 +79,12 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
     : (perGameTdpWatts ?? 0)
   const tdpSourceLabel = isTrackerPriorityMode ? 'Battery Tracker' : 'per-game'
   const expectedMinutesFromCustomTdp = calculateEstimatedMinutesFromTdp(deviceBatteryCapacityWh, activeTdpWatts)
-  const colorMinutes = summary.batteryLifeMinutes ?? expectedMinutesFromCustomTdp
+  // Colour the badge after whichever figure it actually leads with, so the tone
+  // never disagrees with the number next to it.
+  const colorMinutes =
+    activeTdpWatts > 0 && expectedMinutesFromCustomTdp !== null
+      ? expectedMinutesFromCustomTdp
+      : summary.batteryLifeMinutes ?? expectedMinutesFromCustomTdp
   const tone = getBatteryTone(colorMinutes)
 
   const openPerGameTdpModal = () => {
@@ -165,21 +170,33 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
     drawValue = 'Unavailable'
   }
 
-  // Collapsed reading, e.g. "1h42m / 7W". Either half can be missing.
+  // Collapsed reading, e.g. "1h42m / 7W". The measured TDP wins: it comes from
+  // Battery Tracker's record of this machine actually running this game, which
+  // beats a median over other people's hardware. Community reports are the
+  // fallback for when there is no tracker or manual figure to work from.
   const compactParts: string[] = []
-  if (summary.batteryLifeMinutes !== null) {
-    compactParts.push(formatMinutesCompact(summary.batteryLifeMinutes))
-  }
-  if (summary.averagePowerDraw) {
-    compactParts.push(summary.averagePowerDraw.replace(/\s+/g, ''))
+  if (activeTdpWatts > 0) {
+    if (expectedMinutesFromCustomTdp !== null) {
+      compactParts.push(formatMinutesCompact(expectedMinutesFromCustomTdp))
+    }
+    compactParts.push(`${activeTdpWatts}W`)
+  } else {
+    if (summary.batteryLifeMinutes !== null) {
+      compactParts.push(formatMinutesCompact(summary.batteryLifeMinutes))
+    }
+    if (summary.averagePowerDraw) {
+      compactParts.push(summary.averagePowerDraw.replace(/\s+/g, ''))
+    }
   }
 
   let compactText = compactParts.join(' / ')
-  if (summary.isLoading) {
+  if (compactParts.length > 0) {
+    // Nothing to do: a measured or reported figure is already in hand.
+  } else if (summary.isLoading) {
     compactText = 'Loading...'
   } else if (summary.hasError) {
     compactText = 'Unavailable'
-  } else if (compactParts.length === 0) {
+  } else {
     compactText = 'No data'
   }
 
