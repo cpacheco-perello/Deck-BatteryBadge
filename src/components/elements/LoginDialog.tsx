@@ -131,7 +131,7 @@ export const popupLoginDialog = (onCloseCallback = () => {}) => {
         {step === 'waiting' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: 11 }}>
             <p style={{ margin: '0 0 6px 0', opacity: 0.9 }}>
-              Connect the Deck Settings plugin to your GitHub account to submit your own game reports directly from the
+              Connect the DGS Battery plugin to your GitHub account to submit your own game reports directly from the
               plugin.
             </p>
             <div

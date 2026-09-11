@@ -62,7 +62,7 @@ export const submitReportDraft = async (payload: any, templateBody: any[]): Prom
     // 3) Build markdown body with labels mapped from template and images under Game Display Settings
     const body = buildIssueBodyFromTemplate(payload, templateBody, uploadedUrls)
     // 4) Create issue with placeholder title
-    const title = "(Report submitted from Deck Settings Decky Plugin)"
+    const title = "(Report submitted from DGS Battery Decky Plugin)"
     const issue = await createIssueWithBody(title, body)
     if (!issue || typeof issue.html_url !== 'string') {
       throw new Error('Issue creation failed or missing html_url')
@@ -91,7 +91,7 @@ export const updateReportDraft = async (
     // 3) Build markdown body with labels mapped from template and only newly uploaded images
     const body = buildIssueBodyFromTemplate(payload, templateBody, uploadedUrls)
     // 4) Update issue with new placeholder title
-    const title = "(Report updated from Deck Settings Decky Plugin)"
+    const title = "(Report updated from DGS Battery Decky Plugin)"
     const issue = await updateIssueBody(title, body, issueNumber)
     if (!issue || typeof issue.html_url !== 'string') {
       throw new Error('Issue update failed or missing html_url')

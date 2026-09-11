@@ -311,15 +311,52 @@ class Plugin:
 
         return ''
 
+    # Number of most recent discharging samples averaged per app. Enough to smooth
+    # out menu time and loading screens without reaching back to older sessions
+    # that may have run at a completely different TDP.
+    BATTERY_TRACKER_SAMPLE_WINDOW = 200
+
+    def _query_average_power_per_app(self, cursor):
+        """Mean discharging power per app over the most recent samples.
+
+        Returns rows of (app, summed_power, sample_count).
+        """
+        windowed = '''
+            select app, sum(power), count(*)
+            from (
+                select app, power,
+                       row_number() over (partition by app order by time desc) as rn
+                from battery
+                where status = -1 and power > 0
+            )
+            where rn <= ?
+            group by app
+        '''
+        try:
+            return cursor.execute(windowed, (self.BATTERY_TRACKER_SAMPLE_WINDOW,)).fetchall()
+        except sqlite3.OperationalError:
+            # Window functions need SQLite 3.25+. Fall back to an all-time mean.
+            decky.logger.info(
+                'battery tracker: window functions unavailable, averaging all samples'
+            )
+            return cursor.execute(
+                '''
+                select app, sum(power), count(*)
+                from battery
+                where status = -1 and power > 0
+                group by app
+                '''
+            ).fetchall()
+
     async def get_battery_tracker_recent_power_data(self):
         """
-        Reads Battery Tracker's runtime DB and returns the latest historical
-        discharging power sample per app.
+        Reads Battery Tracker's runtime DB and returns the mean discharging
+        power per app over its most recent samples.
 
         Return shape:
           {
             "is_detected": bool,
-            "power_data": [{"name": str, "average_power": int}]
+            "power_data": [{"name": str, "average_power": int, "sample_count": int}]
           }
         """
         default_result = {
@@ -333,24 +370,15 @@ class Plugin:
 
         con = None
         try:
-            con = sqlite3.connect(db_path)
+            # Read-only. This is another plugin's live database and it is being
+            # written to while we read; a read-write handle risks locking it.
+            con = sqlite3.connect(
+                f'file:{urllib.request.pathname2url(db_path)}?mode=ro',
+                uri=True,
+            )
             cursor = con.cursor()
 
-            rows = cursor.execute(
-                '''
-                select b.app, b.power, b.time
-                from battery b
-                inner join (
-                    select app, max(time) as max_time
-                    from battery
-                    where status = -1
-                    group by app
-                ) latest
-                    on latest.app = b.app
-                    and latest.max_time = b.time
-                where b.status = -1
-                ''',
-            ).fetchall()
+            rows = self._query_average_power_per_app(cursor)
 
             if not rows:
                 return {
@@ -358,30 +386,36 @@ class Plugin:
                     'power_data': [],
                 }
 
-            per_app_latest = {}
-            for app, power, _time in rows:
+            per_app_totals = {}
+            for app, total_power, sample_count in rows:
                 name = str(app or '').strip() or 'Unknown'
                 if name == 'Unknown':
                     name = 'Steam'
 
                 try:
-                    watts = float(power) / 10.0
+                    total = float(total_power)
+                    count = int(sample_count)
                 except Exception:
                     continue
 
-                if watts <= 0:
+                if count <= 0 or total <= 0:
                     continue
 
-                # In case of duplicate app aliases, keep the highest latest sample.
-                prev = per_app_latest.get(name)
-                if prev is None or watts > prev:
-                    per_app_latest[name] = watts
+                # Aliases that normalise to the same name are pooled, so the
+                # result stays a true mean instead of favouring one of them.
+                prev_total, prev_count = per_app_totals.get(name, (0.0, 0))
+                per_app_totals[name] = (prev_total + total, prev_count + count)
 
             power_data = []
-            for name, watts in per_app_latest.items():
+            for name, (total, count) in per_app_totals.items():
+                # Battery Tracker stores power in deciwatts.
+                watts = (total / count) / 10.0
+                if watts <= 0:
+                    continue
                 power_data.append({
                     'name': name,
                     'average_power': int(round(watts)),
+                    'sample_count': count,
                 })
 
             power_data.sort(key=lambda x: -x.get('average_power', 0))

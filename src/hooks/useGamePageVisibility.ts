@@ -54,8 +54,8 @@ const isPlayButtonClick = (target: EventTarget | null): boolean => {
   return false
 }
 
-const findTopCapsuleParent = (ref: HTMLDivElement | null): Element | null => {
-  const children = ref?.parentElement?.children
+const findTopCapsuleParent = (node: HTMLElement | null): Element | null => {
+  const children = node?.parentElement?.children
   if (!children) {
     return null
   }
@@ -85,10 +85,12 @@ const findTopCapsuleParent = (ref: HTMLDivElement | null): Element | null => {
 
 type UseGamePageVisibilityArgs = {
   appId: number | undefined
-  badgeRef: React.RefObject<HTMLDivElement | null>
+  // The mounted badge node, not a ref object. The badge unmounts whenever it is
+  // hidden, so the observer below has to re-attach every time it comes back.
+  badgeNode: HTMLElement | null
 }
 
-export const useGamePageVisibility = ({ appId, badgeRef }: UseGamePageVisibilityArgs): boolean => {
+export const useGamePageVisibility = ({ appId, badgeNode }: UseGamePageVisibilityArgs): boolean => {
   const [isSuspended, setIsSuspended] = useState<boolean>(() => isCurrentAppBusy(appId))
   const [isLaunchPending, setIsLaunchPending] = useState<boolean>(false)
   const [isTopCapsuleVisible, setIsTopCapsuleVisible] = useState<boolean>(true)
@@ -158,8 +160,11 @@ export const useGamePageVisibility = ({ appId, badgeRef }: UseGamePageVisibility
   }, [])
 
   useEffect(() => {
-    const topCapsule = findTopCapsuleParent(badgeRef.current)
+    const topCapsule = findTopCapsuleParent(badgeNode)
     if (!topCapsule) {
+      // Nothing mounted yet, or the header is not in the tree. Assume visible so
+      // the badge is not stuck hidden, and re-run once a node does appear.
+      setIsTopCapsuleVisible(true)
       return
     }
 
@@ -190,7 +195,7 @@ export const useGamePageVisibility = ({ appId, badgeRef }: UseGamePageVisibility
     return () => {
       mutationObserver.disconnect()
     }
-  }, [badgeRef])
+  }, [badgeNode])
 
   return isSuspended || isLaunchPending || !isTopCapsuleVisible
 }

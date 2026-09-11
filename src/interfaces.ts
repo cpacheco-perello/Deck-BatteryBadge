@@ -8,6 +8,8 @@ export interface PluginConfig {
   batteryBadgeOffsetTop: number
   batteryBadgeSize: BatteryBadgeSize
   useBatteryTrackerTdp: boolean
+  // Set once the one-off rewrite of the old default badge offsets has run.
+  badgeOffsetsMigrated?: boolean
   reportDraft?: ReportDraft
   notificationSettings?: NotificationSettings
 }

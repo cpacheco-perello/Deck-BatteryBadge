@@ -70,19 +70,19 @@ export const makeNotificationRecordKey = (appId: number | undefined, gameName: s
 
 export const notificationMeta = {
   onGameStartWithReports: {
-    title: 'Deck Settings: Reports Found',
+    title: 'DGS Battery: Reports Found',
     body: 'Check out game reports before playing.',
   },
   onGameStartWithoutReports: {
-    title: 'Deck Settings: No Reports Found',
+    title: 'DGS Battery: No Reports Found',
     body: 'Be the first to submit a game report!',
   },
   onGameStopWithReports: {
-    title: 'Deck Settings: Reports Available',
+    title: 'DGS Battery: Reports Available',
     body: 'Open the plugin to check them out.',
   },
   onGameStopWithoutReports: {
-    title: 'Deck Settings: No Reports Yet',
+    title: 'DGS Battery: No Reports Yet',
     body: 'Help others—submit a game report.',
   },
 }
@@ -225,6 +225,8 @@ export const getPluginConfig = (): PluginConfig => {
     }
   }
 
+  let needsPersist = false
+
   // Legacy cleanup: global average TDP is no longer supported.
   if ('batteryBadgeAverageTdpWatts' in (config as any)) {
     delete (config as any).batteryBadgeAverageTdpWatts
@@ -247,13 +249,19 @@ export const getPluginConfig = (): PluginConfig => {
     defaultBatteryBadgeOffsetTop
   )
 
-  // Legacy migration for old absolute-position defaults.
-  if (
-    config.batteryBadgeOffsetLeft === legacyDefaultBatteryBadgeOffsetLeft &&
-    config.batteryBadgeOffsetTop === legacyDefaultBatteryBadgeOffsetTop
-  ) {
-    config.batteryBadgeOffsetLeft = defaultBatteryBadgeOffsetLeft
-    config.batteryBadgeOffsetTop = defaultBatteryBadgeOffsetTop
+  // Legacy migration for old absolute-position defaults. This has to happen once
+  // and then be recorded, otherwise it re-fires on every read and makes the
+  // legacy coordinate pair impossible to choose deliberately with the sliders.
+  if (!config.badgeOffsetsMigrated) {
+    if (
+      config.batteryBadgeOffsetLeft === legacyDefaultBatteryBadgeOffsetLeft &&
+      config.batteryBadgeOffsetTop === legacyDefaultBatteryBadgeOffsetTop
+    ) {
+      config.batteryBadgeOffsetLeft = defaultBatteryBadgeOffsetLeft
+      config.batteryBadgeOffsetTop = defaultBatteryBadgeOffsetTop
+    }
+    config.badgeOffsetsMigrated = true
+    needsPersist = true
   }
 
   config.batteryBadgeSize = validBadgeSizes.includes(config.batteryBadgeSize)
@@ -264,8 +272,17 @@ export const getPluginConfig = (): PluginConfig => {
   // If the installation ID is not present, generate one and save it.
   if (!('installationId' in config) || !config.installationId) {
     config.installationId = generateUniqueId()
-    window.localStorage.setItem(pluginSettingsKey, JSON.stringify(config))
+    needsPersist = true
   }
+
+  if (needsPersist) {
+    try {
+      window.localStorage.setItem(pluginSettingsKey, JSON.stringify(config))
+    } catch (error) {
+      console.error('[decky-game-settings:constants] Failed to persist migrated plugin config:', error)
+    }
+  }
+
   return config
 }
 

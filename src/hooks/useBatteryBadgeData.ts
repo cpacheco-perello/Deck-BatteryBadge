@@ -11,6 +11,7 @@ type UseBatteryBadgeDataArgs = {
 
 type BatterySummary = {
   isLoading: boolean
+  hasError: boolean
   hasReports: boolean
   hasReportsOutsideDeviceFilter: boolean
   reportCount: number
@@ -22,6 +23,7 @@ type BatterySummary = {
 
 const emptySummary: BatterySummary = {
   isLoading: false,
+  hasError: false,
   hasReports: false,
   hasReportsOutsideDeviceFilter: false,
   reportCount: 0,
@@ -230,7 +232,7 @@ const matchesSelectedDevices = (entry: GameReport | ExternalReview, selectedDevi
 const resolveSummary = (
   details: GameDetails | null,
   selectedDevices: string[]
-): Omit<BatterySummary, 'isLoading'> => {
+): Omit<BatterySummary, 'isLoading' | 'hasError'> => {
   if (!details) {
     return {
       ...emptySummary,
@@ -330,7 +332,7 @@ const resolveSummary = (
 
 type BatterySummaryCacheEntry = {
   cachedAt: number
-  value: Omit<BatterySummary, 'isLoading'>
+  value: Omit<BatterySummary, 'isLoading' | 'hasError'>
 }
 
 const batterySummaryCache = new Map<string, BatterySummaryCacheEntry>()
@@ -398,6 +400,7 @@ export const useBatteryBadgeData = ({
     if (cached && now - cached.cachedAt < cacheTtlMs) {
       setSummary({
         isLoading: false,
+        hasError: false,
         ...cached.value,
       })
       return () => {
@@ -408,6 +411,7 @@ export const useBatteryBadgeData = ({
     setSummary((prev) => ({
       ...prev,
       isLoading: true,
+      hasError: false,
     }))
 
     const load = async () => {
@@ -452,12 +456,15 @@ export const useBatteryBadgeData = ({
 
         setSummary({
           isLoading: false,
+          hasError: false,
           ...resolved,
         })
       } catch (error) {
         console.error('[decky-game-settings:useBatteryBadgeData] Failed to load badge data', error)
         if (!cancelled) {
-          setSummary(emptySummary)
+          // Keep this distinct from "no reports exist": the lookup never completed,
+          // so the badge must not claim the game has no data.
+          setSummary({ ...emptySummary, hasError: true })
         }
       }
     }

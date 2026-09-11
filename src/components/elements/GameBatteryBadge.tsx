@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { DialogButton, Navigation, showModal } from '@decky/ui'
+import React, { useEffect, useMemo, useState } from 'react'
+import { DialogButton, Focusable, Navigation, showModal } from '@decky/ui'
 import { MdBattery5Bar } from 'react-icons/md'
 import {
   batteryBadgeAverageTdpRange,
@@ -34,7 +34,9 @@ type GameBatteryBadgeProps = {
 }
 
 const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
-  const badgeRef = useRef<HTMLDivElement | null>(null)
+  // A state-backed callback ref, not useRef: the visibility hook has to re-run
+  // whenever this node is attached or detached.
+  const [badgeNode, setBadgeNode] = useState<HTMLDivElement | null>(null)
   const { validAppId, routeGameName, shouldPreferNameLookup } = useGameIdentity()
 
   const pluginConfig = getPluginConfig()
@@ -44,7 +46,7 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   const sizePreset = sizePresets[badgeSize]
   const perGameTdpKey = useMemo(() => makeGameTdpOverrideKey(validAppId, routeGameName), [validAppId, routeGameName])
 
-  const shouldHideBadge = useGamePageVisibility({ appId: validAppId, badgeRef })
+  const shouldHideBadge = useGamePageVisibility({ appId: validAppId, badgeNode })
   const { deviceLabel, deviceBatteryCapacityWh } = useDeviceBatteryProfile()
   const [perGameTdpWatts, setPerGameTdpWatts] = useState<number | null>(null)
   const { importedTdpWatts, isBatteryTrackerDetected } = useBatteryTrackerTdp({
@@ -64,7 +66,6 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   })
 
   if (!validAppId && !routeGameName) return null
-  if (shouldHideBadge) return null
 
   const isTrackerPriorityMode = pluginConfig.useBatteryTrackerTdp && isBatteryTrackerDetected
   const activeTdpWatts = isTrackerPriorityMode
@@ -147,28 +148,39 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   let batteryValue = 'No data yet'
   if (summary.isLoading) {
     batteryValue = 'Loading...'
+  } else if (summary.hasError) {
+    batteryValue = 'Unavailable'
   } else if (summary.batteryLifeMinutes !== null) {
     batteryValue = formatMinutes(summary.batteryLifeMinutes)
   }
 
-  const drawValue = summary.averagePowerDraw ?? 'Unknown'
+  let drawValue = summary.averagePowerDraw ?? 'Unknown'
+  if (summary.hasError) {
+    drawValue = 'Unavailable'
+  }
 
   let reportCountText = 'No reports found'
   if (summary.isLoading) {
     reportCountText = 'Loading report data...'
+  } else if (summary.hasError) {
+    reportCountText = "Couldn't reach the reports service"
   } else if (summary.reportCount > 0) {
     reportCountText = `Based on ${summary.reportCount} report${summary.reportCount === 1 ? '' : 's'}`
   } else if (summary.hasReportsOutsideDeviceFilter) {
-    reportCountText = 'No reports found'
+    reportCountText = 'Reports exist, but none for your device filter'
   } else if (summary.hasReports) {
     reportCountText = 'Reports found, but no battery data yet'
   }
 
+  // The anchor stays mounted even when hidden. The visibility hook walks up from
+  // this node to find the header capsule, and unmounting it would tear the
+  // observer down and flip the badge straight back to visible.
   const containerStyle: React.CSSProperties = {
     ...containerBaseStyle,
     left: `${badgeOffsetLeft}px`,
     top: `${badgeOffsetTop}px`,
     maxWidth: sizePreset.maxWidth,
+    display: shouldHideBadge ? 'none' : undefined,
   }
 
   const cardStyle: React.CSSProperties = {
@@ -189,11 +201,12 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   }
 
   return (
-    <div ref={badgeRef} style={containerStyle}>
-      <div style={cardStyle}>
+    <div ref={setBadgeNode} style={containerStyle}>
+      {shouldHideBadge ? null : (
+      <Focusable style={cardStyle} flow-children='vertical'>
         <div style={{ ...titleRowStyle, fontSize: sizePreset.titleFontSize, color: tone.titleColor }}>
           <MdBattery5Bar size={14} color={tone.iconColor} />
-          Deck Settings Battery
+          DGS Battery
         </div>
 
         <div>
@@ -231,7 +244,7 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
 
         <div style={footerStyle}>
           <div style={secondaryTextStyle}>{reportCountText}</div>
-          <div style={footerButtonsStyle}>
+          <Focusable style={footerButtonsStyle} flow-children='horizontal'>
             <DialogButton
               style={{ ...buttonStyle, minWidth: '70px', opacity: isTrackerPriorityMode ? 0.7 : 1 }}
               onClick={openPerGameTdpModal}
@@ -244,9 +257,10 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
             <DialogButton style={buttonStyle} onClick={openGameReport} disabled={!canOpenReport || summary.isLoading}>
               Reports
             </DialogButton>
-          </div>
+          </Focusable>
         </div>
-      </div>
+      </Focusable>
+      )}
     </div>
   )
 }

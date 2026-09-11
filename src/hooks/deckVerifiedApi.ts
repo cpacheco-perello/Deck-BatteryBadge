@@ -2,40 +2,48 @@ import { reportsApiBaseUrl } from '../constants'
 import type { GameDetails, Devices, GameInfo, GameSearchResult, GitHubIssueLabel } from '../interfaces'
 import { fetchNoCors } from '@decky/api'
 
+// A 404 means the API has nothing for this title, which is a normal answer.
+// Anything else is a failure, and callers must be able to tell the two apart
+// instead of presenting a broken lookup as "this game has no data".
+const assertLookupSucceeded = (res: Response, context: string): boolean => {
+  if (res.ok) return true
+  if (res.status === 404) return false
+  console.error(`[decky-game-settings:deckVerifiedApi] ${context}: ${res.status} ${res.statusText}`)
+  throw new Error(`${context} failed with status ${res.status}`)
+}
+
 export const fetchGameDataByAppId = async (appId: number): Promise<GameDetails | null> => {
   const url = `${reportsApiBaseUrl}/game_details?appid=${appId}&include_external=true`
   const res = await fetchNoCors(url, {
     method: 'GET',
   })
-  if (!res.ok) {
-    console.error(`[decky-game-settings:deckVerifiedApi] [decky-game-settings:deckVerifiedApi] Failed to fetch games by app ID: ${res.status} ${res.statusText}`)
+  if (!assertLookupSucceeded(res, 'Failed to fetch game by app ID')) {
     return null
   }
   return await res.json() as GameDetails
 }
 
 export const fetchGameDataByGameName = async (gameName: string): Promise<GameDetails | null> => {
-  const url = `${reportsApiBaseUrl}/game_details?name=${gameName}&include_external=false`
+  const url = `${reportsApiBaseUrl}/game_details?name=${encodeURIComponent(gameName)}&include_external=false`
   const res = await fetchNoCors(url, {
     method: 'GET',
   })
-  if (!res.ok) {
-    console.error(`[decky-game-settings:deckVerifiedApi] Failed to fetch games by name: ${res.status} ${res.statusText}`)
+  if (!assertLookupSucceeded(res, 'Failed to fetch game by name')) {
     return null
   }
   return await res.json() as GameDetails
 }
 
 export const getGamesBySearchTerm = async (term: string): Promise<GameInfo[] | null> => {
-  const url = `${reportsApiBaseUrl}/search_games?term=${term}&include_external=true`
-  if (!term && term.trim().length < 3) {
+  // The guard used &&, so a one or two character term slipped through to the API.
+  if (!term || term.trim().length < 3) {
     return []
   }
+  const url = `${reportsApiBaseUrl}/search_games?term=${encodeURIComponent(term)}&include_external=true`
   const res = await fetchNoCors(url, {
     method: 'GET',
   })
-  if (!res.ok) {
-    console.error(`[decky-game-settings:deckVerifiedApi] Failed to fetch games by search term: ${res.status} ${res.statusText}`)
+  if (!assertLookupSucceeded(res, 'Failed to search games')) {
     return []
   }
   const data = await res.json() as GameSearchResult[]

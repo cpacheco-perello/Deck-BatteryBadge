@@ -5,6 +5,7 @@ import { batteryBadgeAverageTdpRange } from '../constants'
 type BatteryTrackerPowerEntry = {
   name?: string
   average_power?: number | string
+  sample_count?: number
 }
 
 type BatteryTrackerRecentData = {
