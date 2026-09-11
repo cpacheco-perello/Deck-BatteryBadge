@@ -4,7 +4,7 @@ import type {
   NotificationRecord,
   PluginConfig,
   BatteryBadgeSize,
-  BatteryBadgeCorner,
+  BatteryBadgeAlign,
 } from './interfaces'
 
 export const reportsApiBaseUrl = 'https://deckverified.games/deck-verified/api/v1'
@@ -18,20 +18,18 @@ export const defaultNotificationSettings: NotificationSettings = {
   notifyOncePerGame: false,
 }
 
-// Padding from the pinned corner, not a coordinate on the panel. A short range
-// is all that is needed to step around another plugin's badge; moving further
-// than this means the badge belongs in a different corner.
+// Margins around the badge within its row, not a coordinate on the panel.
 export const batteryBadgeOffsetRange = { min: 0, max: 120 }
 export const batteryBadgeAverageTdpRange = { min: 0, max: 45 }
 
-export const defaultBatteryBadgeCorner: BatteryBadgeCorner = 'top-right'
+export const defaultBatteryBadgeAlign: BatteryBadgeAlign = 'left'
 export const defaultBatteryBadgeOffsetX = 16
-export const defaultBatteryBadgeOffsetY = 16
+export const defaultBatteryBadgeOffsetY = 8
 export const defaultBatteryBadgeSize: BatteryBadgeSize = 'regular'
 export const defaultUseBatteryTrackerTdp = false
 
 const validBadgeSizes = ['compact', 'regular', 'large'] as const
-const validBadgeCorners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const
+const validBadgeAligns = ['left', 'center', 'right'] as const
 const gameTdpOverridesKey = `${__PLUGIN_NAME__}:gameTdpOverrides`
 
 type GameTdpOverrides = Record<string, number>
@@ -207,7 +205,7 @@ export const getPluginConfig = (): PluginConfig => {
   const defaultConfig: PluginConfig = {
     filterDevices: [],
     showAllApps: false,
-    batteryBadgeCorner: defaultBatteryBadgeCorner,
+    batteryBadgeAlign: defaultBatteryBadgeAlign,
     batteryBadgeOffsetX: defaultBatteryBadgeOffsetX,
     batteryBadgeOffsetY: defaultBatteryBadgeOffsetY,
     batteryBadgeSize: defaultBatteryBadgeSize,
@@ -241,7 +239,12 @@ export const getPluginConfig = (): PluginConfig => {
   }
   // Drop the old absolute-coordinate keys. They were measured against a
   // 1280x800 panel and have no meaning now that the badge is corner-anchored.
-  const legacyPositionKeys = ['batteryBadgeOffsetLeft', 'batteryBadgeOffsetTop', 'badgeOffsetsMigrated']
+  const legacyPositionKeys = [
+    'batteryBadgeOffsetLeft',
+    'batteryBadgeOffsetTop',
+    'badgeOffsetsMigrated',
+    'batteryBadgeCorner',
+  ]
   for (const legacyKey of legacyPositionKeys) {
     if (legacyKey in (config as any)) {
       delete (config as any)[legacyKey]
@@ -249,9 +252,9 @@ export const getPluginConfig = (): PluginConfig => {
     }
   }
 
-  config.batteryBadgeCorner = validBadgeCorners.includes(config.batteryBadgeCorner)
-    ? config.batteryBadgeCorner
-    : defaultBatteryBadgeCorner
+  config.batteryBadgeAlign = validBadgeAligns.includes(config.batteryBadgeAlign)
+    ? config.batteryBadgeAlign
+    : defaultBatteryBadgeAlign
   config.batteryBadgeOffsetX = clampNumber(
     config.batteryBadgeOffsetX,
     batteryBadgeOffsetRange.min,

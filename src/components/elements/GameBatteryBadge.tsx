@@ -24,8 +24,8 @@ import {
   footerButtonsStyle,
   footerStyle,
   getBatteryTone,
-  getCornerPlacement,
   getResponsiveMaxWidth,
+  getRowPlacement,
   metricLabelStyle,
   metricValueStyle,
   secondaryTextStyle,
@@ -45,7 +45,7 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   const { validAppId, routeGameName, shouldPreferNameLookup } = useGameIdentity()
 
   const pluginConfig = getPluginConfig()
-  const badgeCorner = pluginConfig.batteryBadgeCorner
+  const badgeAlign = pluginConfig.batteryBadgeAlign
   const badgeOffsetX = pluginConfig.batteryBadgeOffsetX
   const badgeOffsetY = pluginConfig.batteryBadgeOffsetY
   const badgeSize = pluginConfig.batteryBadgeSize
@@ -213,19 +213,21 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
     reportCountText = 'Reports found, but no battery data yet'
   }
 
-  // The anchor stays mounted even when hidden. The visibility hook walks up from
+  // The row stays mounted even when hidden. The visibility hook walks up from
   // this node to find the header capsule, and unmounting it would tear the
   // observer down and flip the badge straight back to visible.
   const containerStyle: React.CSSProperties = {
     ...containerBaseStyle,
-    ...getCornerPlacement(badgeCorner, badgeOffsetX, badgeOffsetY),
-    maxWidth: getResponsiveMaxWidth(sizePreset.maxWidth, badgeOffsetX),
-    display: shouldHideBadge ? 'none' : undefined,
+    ...getRowPlacement(badgeAlign, badgeOffsetX, badgeOffsetY),
+    ...(shouldHideBadge ? { display: 'none' } : null),
   }
+
+  const responsiveMaxWidth = getResponsiveMaxWidth(sizePreset.maxWidth, badgeOffsetX)
 
   const cardStyle: React.CSSProperties = {
     ...cardBaseStyle,
     minWidth: sizePreset.minWidth,
+    maxWidth: responsiveMaxWidth,
     padding: sizePreset.cardPadding,
     gap: sizePreset.cardGap,
     border: `1px solid ${tone.border}`,
@@ -234,6 +236,7 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
 
   const collapsedCardStyle: React.CSSProperties = {
     ...collapsedCardBaseStyle,
+    maxWidth: responsiveMaxWidth,
     padding: sizePreset.collapsedPadding,
     fontSize: sizePreset.collapsedFontSize,
     color: tone.metricColor,

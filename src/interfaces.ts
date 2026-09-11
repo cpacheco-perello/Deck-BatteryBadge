@@ -1,14 +1,14 @@
 export type BatteryBadgeSize = 'compact' | 'regular' | 'large'
-export type BatteryBadgeCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+export type BatteryBadgeAlign = 'left' | 'center' | 'right'
 
 export interface PluginConfig {
   installationId?: string
   filterDevices: string[]
   showAllApps: boolean
-  // Which corner of the game page the badge is pinned to, plus how far it sits
-  // from that corner. Anchoring beats absolute coordinates because right and
-  // bottom edges follow the screen instead of assuming a 1280x800 panel.
-  batteryBadgeCorner: BatteryBadgeCorner
+  // The badge sits in the page's normal content flow, which is what lets
+  // gamepad navigation reach it. Placement is therefore alignment within its
+  // row plus margins, not a coordinate or a corner.
+  batteryBadgeAlign: BatteryBadgeAlign
   batteryBadgeOffsetX: number
   batteryBadgeOffsetY: number
   batteryBadgeSize: BatteryBadgeSize
