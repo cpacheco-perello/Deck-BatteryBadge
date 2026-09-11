@@ -1,5 +1,5 @@
 import React from 'react'
-import type { BatteryBadgeAlign, BatteryBadgeSize } from '../../../interfaces'
+import type { BatteryBadgeCorner, BatteryBadgeSize } from '../../../interfaces'
 
 export type BadgeSizePreset = {
   maxWidth: string
@@ -69,34 +69,34 @@ export const sizePresets: Record<BatteryBadgeSize, BadgeSizePreset> = {
   },
 }
 
-// The badge lives in the page's normal content flow. An absolutely positioned
-// overlay sits outside the directional navigation graph, so nothing on the page
-// ever pointed at it and the gamepad could not reach it at all.
 export const containerBaseStyle: React.CSSProperties = {
-  display: 'flex',
-  width: '100%',
+  position: 'absolute',
+  zIndex: 5,
   pointerEvents: 'auto',
-  boxSizing: 'border-box',
+  width: 'fit-content',
 }
 
-const alignToJustify: Record<BatteryBadgeAlign, React.CSSProperties['justifyContent']> = {
-  left: 'flex-start',
-  center: 'center',
-  right: 'flex-end',
-}
-
-export const getRowPlacement = (
-  align: BatteryBadgeAlign,
+// Pin to the chosen corner rather than to a coordinate. Using right and bottom
+// for those corners means the badge tracks the edge of whatever panel it is
+// rendered on instead of assuming a fixed 1280x800 screen.
+export const getCornerPlacement = (
+  corner: BatteryBadgeCorner,
   offsetX: number,
   offsetY: number
-): React.CSSProperties => ({
-  justifyContent: alignToJustify[align] ?? 'flex-start',
-  padding: `${offsetY}px ${offsetX}px`,
-})
+): React.CSSProperties => {
+  const vertical: React.CSSProperties = corner.startsWith('top')
+    ? { top: `${offsetY}px` }
+    : { bottom: `${offsetY}px` }
+  const horizontal: React.CSSProperties = corner.endsWith('left')
+    ? { left: `${offsetX}px` }
+    : { right: `${offsetX}px` }
+  return { ...vertical, ...horizontal }
+}
 
-// Never let the preset width push the card off a narrow screen.
+// Never let the preset width push the card off a narrow screen. The gutter
+// accounts for the offset on the pinned side plus breathing room on the other.
 export const getResponsiveMaxWidth = (presetMaxWidth: string, offsetX: number): string =>
-  `min(${presetMaxWidth}, calc(100vw - ${offsetX * 2 + 24}px))`
+  `min(${presetMaxWidth}, calc(100vw - ${offsetX + 24}px))`
 
 export const cardBaseStyle: React.CSSProperties = {
   borderRadius: '8px',

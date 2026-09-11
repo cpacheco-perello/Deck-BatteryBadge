@@ -6,14 +6,14 @@ import type {
   PluginConfig,
   NotificationSettings,
   BatteryBadgeSize,
-  BatteryBadgeAlign,
+  BatteryBadgeCorner,
 } from '../../interfaces'
 import {
   getPluginConfig,
   setPluginConfig,
   defaultNotificationSettings,
   batteryBadgeOffsetRange,
-  defaultBatteryBadgeAlign,
+  defaultBatteryBadgeCorner,
   defaultBatteryBadgeOffsetX,
   defaultBatteryBadgeOffsetY,
   defaultBatteryBadgeSize,
@@ -71,10 +71,11 @@ const badgeSizeOptions: Array<{ label: string; value: BatteryBadgeSize }> = [
   { label: 'Large', value: 'large' },
 ]
 
-const badgeAlignOptions: Array<{ label: string; value: BatteryBadgeAlign }> = [
-  { label: 'Left', value: 'left' },
-  { label: 'Centre', value: 'center' },
-  { label: 'Right', value: 'right' },
+const badgeCornerOptions: Array<{ label: string; value: BatteryBadgeCorner }> = [
+  { label: 'Top right', value: 'top-right' },
+  { label: 'Top left', value: 'top-left' },
+  { label: 'Bottom right', value: 'bottom-right' },
+  { label: 'Bottom left', value: 'bottom-left' },
 ]
 
 const PluginConfigView: React.FC<PluginConfigViewProps> = ({ onGoBack }) => {
@@ -209,27 +210,27 @@ const PluginConfigView: React.FC<PluginConfigViewProps> = ({ onGoBack }) => {
     updateConfig({ batteryBadgeOffsetY: clampOffset(value) })
   }
 
-  const selectedAlignIndex = Math.max(
+  const selectedCornerIndex = Math.max(
     0,
-    badgeAlignOptions.findIndex((option) => option.value === currentConfig.batteryBadgeAlign)
+    badgeCornerOptions.findIndex((option) => option.value === currentConfig.batteryBadgeCorner)
   )
 
-  const selectedAlignLabel =
-    badgeAlignOptions[selectedAlignIndex]?.label ||
-    badgeAlignOptions.find((option) => option.value === defaultBatteryBadgeAlign)?.label ||
-    'Left'
+  const selectedCornerLabel =
+    badgeCornerOptions[selectedCornerIndex]?.label ||
+    badgeCornerOptions.find((option) => option.value === defaultBatteryBadgeCorner)?.label ||
+    'Top right'
 
-  const openBadgeAlignSelector = () => {
+  const openBadgeCornerSelector = () => {
     showModal(
       <SelectModal
-        label='Align badge'
-        options={badgeAlignOptions.map((option) => option.label)}
-        selectedIndex={selectedAlignIndex}
+        label='Pin badge to corner'
+        options={badgeCornerOptions.map((option) => option.label)}
+        selectedIndex={selectedCornerIndex}
         onClosed={(_value, index) => {
           if (typeof index !== 'number') return
-          const next = badgeAlignOptions[index]
+          const next = badgeCornerOptions[index]
           if (!next) return
-          updateConfig({ batteryBadgeAlign: next.value })
+          updateConfig({ batteryBadgeCorner: next.value })
         }}
       />
     )
@@ -237,7 +238,7 @@ const PluginConfigView: React.FC<PluginConfigViewProps> = ({ onGoBack }) => {
 
   const resetBadgePlacement = () => {
     updateConfig({
-      batteryBadgeAlign: defaultBatteryBadgeAlign,
+      batteryBadgeCorner: defaultBatteryBadgeCorner,
       batteryBadgeOffsetX: defaultBatteryBadgeOffsetX,
       batteryBadgeOffsetY: defaultBatteryBadgeOffsetY,
       batteryBadgeSize: defaultBatteryBadgeSize,
@@ -361,20 +362,21 @@ const PluginConfigView: React.FC<PluginConfigViewProps> = ({ onGoBack }) => {
         <PanelSection title='Game page badge'>
           <PanelSectionRow>
             <div style={fieldBlockStyle}>
-              <div style={fieldHeadingStyle}>Alignment</div>
+              <div style={fieldHeadingStyle}>Corner</div>
               <div style={helperTextStyle}>
-                Where the badge sits in its row on the game page.
+                The badge follows this corner on any screen size. Move it if another plugin's badge
+                already sits there.
               </div>
-              <DialogButton style={actionButtonStyle} onClick={openBadgeAlignSelector}>
-                {selectedAlignLabel}
+              <DialogButton style={actionButtonStyle} onClick={openBadgeCornerSelector}>
+                {selectedCornerLabel}
               </DialogButton>
             </div>
           </PanelSectionRow>
           <PanelSectionRow>
             <div style={fieldBlockStyle}>
-              <div style={fieldHeadingStyle}>Side margin</div>
+              <div style={fieldHeadingStyle}>Horizontal spacing</div>
               <div style={helperTextStyle}>
-                Space between the badge and the edges of the page.
+                Distance from the {selectedCornerLabel.toLowerCase()} corner, sideways.
               </div>
               <SliderField
                 value={currentConfig.batteryBadgeOffsetX ?? defaultBatteryBadgeOffsetX}
@@ -389,9 +391,9 @@ const PluginConfigView: React.FC<PluginConfigViewProps> = ({ onGoBack }) => {
           </PanelSectionRow>
           <PanelSectionRow>
             <div style={fieldBlockStyle}>
-              <div style={fieldHeadingStyle}>Vertical margin</div>
+              <div style={fieldHeadingStyle}>Vertical spacing</div>
               <div style={helperTextStyle}>
-                Space above and below the badge.
+                Distance from the {selectedCornerLabel.toLowerCase()} corner, up or down.
               </div>
               <SliderField
                 value={currentConfig.batteryBadgeOffsetY ?? defaultBatteryBadgeOffsetY}
@@ -429,7 +431,7 @@ const PluginConfigView: React.FC<PluginConfigViewProps> = ({ onGoBack }) => {
             <div style={fieldBlockStyle}>
               <div style={fieldHeadingStyle}>Reset placement</div>
               <div style={helperTextStyle}>
-                Puts the alignment, margins and size back to their defaults.
+                Puts the corner, spacing and size back to their defaults.
               </div>
               <DialogButton style={actionButtonStyle} onClick={resetBadgePlacement}>
                 Reset to defaults
