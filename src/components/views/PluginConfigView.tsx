@@ -1,15 +1,21 @@
 import { PanelSection, PanelSectionRow, DialogButton, Focusable, ToggleField, Dropdown, ButtonItem, showModal, SliderField } from '@decky/ui'
 import { useState, useEffect, CSSProperties, useMemo } from 'react'
 import { MdArrowBack } from 'react-icons/md'
-import type { Devices, PluginConfig, NotificationSettings, BatteryBadgeSize } from '../../interfaces'
+import type {
+  Devices,
+  PluginConfig,
+  NotificationSettings,
+  BatteryBadgeSize,
+  BatteryBadgeCorner,
+} from '../../interfaces'
 import {
   getPluginConfig,
   setPluginConfig,
   defaultNotificationSettings,
-  batteryBadgeOffsetLeftRange,
-  batteryBadgeOffsetTopRange,
-  defaultBatteryBadgeOffsetLeft,
-  defaultBatteryBadgeOffsetTop,
+  batteryBadgeOffsetRange,
+  defaultBatteryBadgeCorner,
+  defaultBatteryBadgeOffsetX,
+  defaultBatteryBadgeOffsetY,
   defaultBatteryBadgeSize,
 } from '../../constants'
 import { fetchDeviceList } from '../../hooks/deckVerifiedApi'
@@ -63,6 +69,13 @@ const badgeSizeOptions: Array<{ label: string; value: BatteryBadgeSize }> = [
   { label: 'Compact', value: 'compact' },
   { label: 'Regular', value: 'regular' },
   { label: 'Large', value: 'large' },
+]
+
+const badgeCornerOptions: Array<{ label: string; value: BatteryBadgeCorner }> = [
+  { label: 'Top right', value: 'top-right' },
+  { label: 'Top left', value: 'top-left' },
+  { label: 'Bottom right', value: 'bottom-right' },
+  { label: 'Bottom left', value: 'bottom-left' },
 ]
 
 const PluginConfigView: React.FC<PluginConfigViewProps> = ({ onGoBack }) => {
@@ -186,23 +199,49 @@ const PluginConfigView: React.FC<PluginConfigViewProps> = ({ onGoBack }) => {
     badgeSizeOptions.find((option) => option.value === defaultBatteryBadgeSize)?.label ||
     'Regular'
 
-  const updateBadgeOffsetLeft = (value: number) => {
-    const rounded = Math.round(value)
-    updateConfig({
-      batteryBadgeOffsetLeft: Math.max(
-        batteryBadgeOffsetLeftRange.min,
-        Math.min(batteryBadgeOffsetLeftRange.max, rounded)
-      ),
-    })
+  const clampOffset = (value: number): number =>
+    Math.max(batteryBadgeOffsetRange.min, Math.min(batteryBadgeOffsetRange.max, Math.round(value)))
+
+  const updateBadgeOffsetX = (value: number) => {
+    updateConfig({ batteryBadgeOffsetX: clampOffset(value) })
   }
 
-  const updateBadgeOffsetTop = (value: number) => {
-    const rounded = Math.round(value)
+  const updateBadgeOffsetY = (value: number) => {
+    updateConfig({ batteryBadgeOffsetY: clampOffset(value) })
+  }
+
+  const selectedCornerIndex = Math.max(
+    0,
+    badgeCornerOptions.findIndex((option) => option.value === currentConfig.batteryBadgeCorner)
+  )
+
+  const selectedCornerLabel =
+    badgeCornerOptions[selectedCornerIndex]?.label ||
+    badgeCornerOptions.find((option) => option.value === defaultBatteryBadgeCorner)?.label ||
+    'Top right'
+
+  const openBadgeCornerSelector = () => {
+    showModal(
+      <SelectModal
+        label='Pin badge to corner'
+        options={badgeCornerOptions.map((option) => option.label)}
+        selectedIndex={selectedCornerIndex}
+        onClosed={(_value, index) => {
+          if (typeof index !== 'number') return
+          const next = badgeCornerOptions[index]
+          if (!next) return
+          updateConfig({ batteryBadgeCorner: next.value })
+        }}
+      />
+    )
+  }
+
+  const resetBadgePlacement = () => {
     updateConfig({
-      batteryBadgeOffsetTop: Math.max(
-        batteryBadgeOffsetTopRange.min,
-        Math.min(batteryBadgeOffsetTopRange.max, rounded)
-      ),
+      batteryBadgeCorner: defaultBatteryBadgeCorner,
+      batteryBadgeOffsetX: defaultBatteryBadgeOffsetX,
+      batteryBadgeOffsetY: defaultBatteryBadgeOffsetY,
+      batteryBadgeSize: defaultBatteryBadgeSize,
     })
   }
 
@@ -323,35 +362,47 @@ const PluginConfigView: React.FC<PluginConfigViewProps> = ({ onGoBack }) => {
         <PanelSection title='Game page badge'>
           <PanelSectionRow>
             <div style={fieldBlockStyle}>
-              <div style={fieldHeadingStyle}>Horizontal offset (left)</div>
+              <div style={fieldHeadingStyle}>Corner</div>
               <div style={helperTextStyle}>
-                Distance from the left edge: {currentConfig.batteryBadgeOffsetLeft ?? defaultBatteryBadgeOffsetLeft}px
+                The badge follows this corner on any screen size. Move it if another plugin's badge
+                already sits there.
+              </div>
+              <DialogButton style={actionButtonStyle} onClick={openBadgeCornerSelector}>
+                {selectedCornerLabel}
+              </DialogButton>
+            </div>
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <div style={fieldBlockStyle}>
+              <div style={fieldHeadingStyle}>Horizontal spacing</div>
+              <div style={helperTextStyle}>
+                Distance from the {selectedCornerLabel.toLowerCase()} corner, sideways.
               </div>
               <SliderField
-                value={currentConfig.batteryBadgeOffsetLeft ?? defaultBatteryBadgeOffsetLeft}
-                min={batteryBadgeOffsetLeftRange.min}
-                max={batteryBadgeOffsetLeftRange.max}
+                value={currentConfig.batteryBadgeOffsetX ?? defaultBatteryBadgeOffsetX}
+                min={batteryBadgeOffsetRange.min}
+                max={batteryBadgeOffsetRange.max}
                 step={1}
                 showValue
                 valueSuffix='px'
-                onChange={updateBadgeOffsetLeft}
+                onChange={updateBadgeOffsetX}
               />
             </div>
           </PanelSectionRow>
           <PanelSectionRow>
             <div style={fieldBlockStyle}>
-              <div style={fieldHeadingStyle}>Vertical offset (top)</div>
+              <div style={fieldHeadingStyle}>Vertical spacing</div>
               <div style={helperTextStyle}>
-                Distance from the top edge: {currentConfig.batteryBadgeOffsetTop ?? defaultBatteryBadgeOffsetTop}px
+                Distance from the {selectedCornerLabel.toLowerCase()} corner, up or down.
               </div>
               <SliderField
-                value={currentConfig.batteryBadgeOffsetTop ?? defaultBatteryBadgeOffsetTop}
-                min={batteryBadgeOffsetTopRange.min}
-                max={batteryBadgeOffsetTopRange.max}
+                value={currentConfig.batteryBadgeOffsetY ?? defaultBatteryBadgeOffsetY}
+                min={batteryBadgeOffsetRange.min}
+                max={batteryBadgeOffsetRange.max}
                 step={1}
                 showValue
                 valueSuffix='px'
-                onChange={updateBadgeOffsetTop}
+                onChange={updateBadgeOffsetY}
               />
             </div>
           </PanelSectionRow>
@@ -374,6 +425,17 @@ const PluginConfigView: React.FC<PluginConfigViewProps> = ({ onGoBack }) => {
               <div style={helperTextStyle}>
                 When enabled and Battery Tracker is detected, tracker TDP has priority and manual per-game TDP editing is locked.
               </div>
+            </div>
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <div style={fieldBlockStyle}>
+              <div style={fieldHeadingStyle}>Reset placement</div>
+              <div style={helperTextStyle}>
+                Puts the corner, spacing and size back to their defaults.
+              </div>
+              <DialogButton style={actionButtonStyle} onClick={resetBadgePlacement}>
+                Reset to defaults
+              </DialogButton>
             </div>
           </PanelSectionRow>
         </PanelSection>

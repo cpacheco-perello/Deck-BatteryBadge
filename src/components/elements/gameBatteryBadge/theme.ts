@@ -1,5 +1,5 @@
 import React from 'react'
-import type { BatteryBadgeSize } from '../../../interfaces'
+import type { BatteryBadgeCorner, BatteryBadgeSize } from '../../../interfaces'
 
 export type BadgeSizePreset = {
   maxWidth: string
@@ -67,6 +67,28 @@ export const containerBaseStyle: React.CSSProperties = {
   pointerEvents: 'auto',
   width: 'fit-content',
 }
+
+// Pin to the chosen corner rather than to a coordinate. Using right and bottom
+// for those corners means the badge tracks the edge of whatever panel it is
+// rendered on instead of assuming a fixed 1280x800 screen.
+export const getCornerPlacement = (
+  corner: BatteryBadgeCorner,
+  offsetX: number,
+  offsetY: number
+): React.CSSProperties => {
+  const vertical: React.CSSProperties = corner.startsWith('top')
+    ? { top: `${offsetY}px` }
+    : { bottom: `${offsetY}px` }
+  const horizontal: React.CSSProperties = corner.endsWith('left')
+    ? { left: `${offsetX}px` }
+    : { right: `${offsetX}px` }
+  return { ...vertical, ...horizontal }
+}
+
+// Never let the preset width push the card off a narrow screen. The gutter
+// accounts for the offset on the pinned side plus breathing room on the other.
+export const getResponsiveMaxWidth = (presetMaxWidth: string, offsetX: number): string =>
+  `min(${presetMaxWidth}, calc(100vw - ${offsetX + 24}px))`
 
 export const cardBaseStyle: React.CSSProperties = {
   borderRadius: '8px',

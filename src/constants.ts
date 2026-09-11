@@ -4,6 +4,7 @@ import type {
   NotificationRecord,
   PluginConfig,
   BatteryBadgeSize,
+  BatteryBadgeCorner,
 } from './interfaces'
 
 export const reportsApiBaseUrl = 'https://deckverified.games/deck-verified/api/v1'
@@ -17,19 +18,20 @@ export const defaultNotificationSettings: NotificationSettings = {
   notifyOncePerGame: false,
 }
 
-export const batteryBadgeOffsetLeftRange = { min: 0, max: 1200 }
-export const batteryBadgeOffsetTopRange = { min: 0, max: 400 }
+// Padding from the pinned corner, not a coordinate on the panel. A short range
+// is all that is needed to step around another plugin's badge; moving further
+// than this means the badge belongs in a different corner.
+export const batteryBadgeOffsetRange = { min: 0, max: 120 }
 export const batteryBadgeAverageTdpRange = { min: 0, max: 45 }
 
-const legacyDefaultBatteryBadgeOffsetLeft = 18
-const legacyDefaultBatteryBadgeOffsetTop = 16
-
-export const defaultBatteryBadgeOffsetLeft = 0
-export const defaultBatteryBadgeOffsetTop = 0
+export const defaultBatteryBadgeCorner: BatteryBadgeCorner = 'top-right'
+export const defaultBatteryBadgeOffsetX = 16
+export const defaultBatteryBadgeOffsetY = 16
 export const defaultBatteryBadgeSize: BatteryBadgeSize = 'regular'
 export const defaultUseBatteryTrackerTdp = false
 
 const validBadgeSizes = ['compact', 'regular', 'large'] as const
+const validBadgeCorners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const
 const gameTdpOverridesKey = `${__PLUGIN_NAME__}:gameTdpOverrides`
 
 type GameTdpOverrides = Record<string, number>
@@ -205,8 +207,9 @@ export const getPluginConfig = (): PluginConfig => {
   const defaultConfig: PluginConfig = {
     filterDevices: [],
     showAllApps: false,
-    batteryBadgeOffsetLeft: defaultBatteryBadgeOffsetLeft,
-    batteryBadgeOffsetTop: defaultBatteryBadgeOffsetTop,
+    batteryBadgeCorner: defaultBatteryBadgeCorner,
+    batteryBadgeOffsetX: defaultBatteryBadgeOffsetX,
+    batteryBadgeOffsetY: defaultBatteryBadgeOffsetY,
     batteryBadgeSize: defaultBatteryBadgeSize,
     useBatteryTrackerTdp: defaultUseBatteryTrackerTdp,
     notificationSettings: { ...defaultNotificationSettings },
@@ -236,33 +239,31 @@ export const getPluginConfig = (): PluginConfig => {
     ...defaultNotificationSettings,
     ...(config.notificationSettings ?? {}),
   }
-  config.batteryBadgeOffsetLeft = clampNumber(
-    config.batteryBadgeOffsetLeft,
-    batteryBadgeOffsetLeftRange.min,
-    batteryBadgeOffsetLeftRange.max,
-    defaultBatteryBadgeOffsetLeft
-  )
-  config.batteryBadgeOffsetTop = clampNumber(
-    config.batteryBadgeOffsetTop,
-    batteryBadgeOffsetTopRange.min,
-    batteryBadgeOffsetTopRange.max,
-    defaultBatteryBadgeOffsetTop
-  )
-
-  // Legacy migration for old absolute-position defaults. This has to happen once
-  // and then be recorded, otherwise it re-fires on every read and makes the
-  // legacy coordinate pair impossible to choose deliberately with the sliders.
-  if (!config.badgeOffsetsMigrated) {
-    if (
-      config.batteryBadgeOffsetLeft === legacyDefaultBatteryBadgeOffsetLeft &&
-      config.batteryBadgeOffsetTop === legacyDefaultBatteryBadgeOffsetTop
-    ) {
-      config.batteryBadgeOffsetLeft = defaultBatteryBadgeOffsetLeft
-      config.batteryBadgeOffsetTop = defaultBatteryBadgeOffsetTop
+  // Drop the old absolute-coordinate keys. They were measured against a
+  // 1280x800 panel and have no meaning now that the badge is corner-anchored.
+  const legacyPositionKeys = ['batteryBadgeOffsetLeft', 'batteryBadgeOffsetTop', 'badgeOffsetsMigrated']
+  for (const legacyKey of legacyPositionKeys) {
+    if (legacyKey in (config as any)) {
+      delete (config as any)[legacyKey]
+      needsPersist = true
     }
-    config.badgeOffsetsMigrated = true
-    needsPersist = true
   }
+
+  config.batteryBadgeCorner = validBadgeCorners.includes(config.batteryBadgeCorner)
+    ? config.batteryBadgeCorner
+    : defaultBatteryBadgeCorner
+  config.batteryBadgeOffsetX = clampNumber(
+    config.batteryBadgeOffsetX,
+    batteryBadgeOffsetRange.min,
+    batteryBadgeOffsetRange.max,
+    defaultBatteryBadgeOffsetX
+  )
+  config.batteryBadgeOffsetY = clampNumber(
+    config.batteryBadgeOffsetY,
+    batteryBadgeOffsetRange.min,
+    batteryBadgeOffsetRange.max,
+    defaultBatteryBadgeOffsetY
+  )
 
   config.batteryBadgeSize = validBadgeSizes.includes(config.batteryBadgeSize)
     ? config.batteryBadgeSize

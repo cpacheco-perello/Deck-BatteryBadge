@@ -1,15 +1,18 @@
 export type BatteryBadgeSize = 'compact' | 'regular' | 'large'
+export type BatteryBadgeCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
 export interface PluginConfig {
   installationId?: string
   filterDevices: string[]
   showAllApps: boolean
-  batteryBadgeOffsetLeft: number
-  batteryBadgeOffsetTop: number
+  // Which corner of the game page the badge is pinned to, plus how far it sits
+  // from that corner. Anchoring beats absolute coordinates because right and
+  // bottom edges follow the screen instead of assuming a 1280x800 panel.
+  batteryBadgeCorner: BatteryBadgeCorner
+  batteryBadgeOffsetX: number
+  batteryBadgeOffsetY: number
   batteryBadgeSize: BatteryBadgeSize
   useBatteryTrackerTdp: boolean
-  // Set once the one-off rewrite of the old default badge offsets has run.
-  badgeOffsetsMigrated?: boolean
   reportDraft?: ReportDraft
   notificationSettings?: NotificationSettings
 }

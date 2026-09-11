@@ -22,6 +22,8 @@ import {
   footerButtonsStyle,
   footerStyle,
   getBatteryTone,
+  getCornerPlacement,
+  getResponsiveMaxWidth,
   metricLabelStyle,
   metricValueStyle,
   secondaryTextStyle,
@@ -40,8 +42,9 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   const { validAppId, routeGameName, shouldPreferNameLookup } = useGameIdentity()
 
   const pluginConfig = getPluginConfig()
-  const badgeOffsetLeft = pluginConfig.batteryBadgeOffsetLeft
-  const badgeOffsetTop = pluginConfig.batteryBadgeOffsetTop
+  const badgeCorner = pluginConfig.batteryBadgeCorner
+  const badgeOffsetX = pluginConfig.batteryBadgeOffsetX
+  const badgeOffsetY = pluginConfig.batteryBadgeOffsetY
   const badgeSize = pluginConfig.batteryBadgeSize
   const sizePreset = sizePresets[badgeSize]
   const perGameTdpKey = useMemo(() => makeGameTdpOverrideKey(validAppId, routeGameName), [validAppId, routeGameName])
@@ -177,9 +180,8 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   // observer down and flip the badge straight back to visible.
   const containerStyle: React.CSSProperties = {
     ...containerBaseStyle,
-    left: `${badgeOffsetLeft}px`,
-    top: `${badgeOffsetTop}px`,
-    maxWidth: sizePreset.maxWidth,
+    ...getCornerPlacement(badgeCorner, badgeOffsetX, badgeOffsetY),
+    maxWidth: getResponsiveMaxWidth(sizePreset.maxWidth, badgeOffsetX),
     display: shouldHideBadge ? 'none' : undefined,
   }
 
@@ -203,7 +205,10 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   return (
     <div ref={setBadgeNode} style={containerStyle}>
       {shouldHideBadge ? null : (
-      <Focusable style={cardStyle} flow-children='vertical'>
+      // Plain div, not a Focusable. Only the button row below takes focus, so
+      // the badge adds two stops to gamepad navigation instead of a nested
+      // container that competes with other plugins' injected badges.
+      <div style={cardStyle}>
         <div style={{ ...titleRowStyle, fontSize: sizePreset.titleFontSize, color: tone.titleColor }}>
           <MdBattery5Bar size={14} color={tone.iconColor} />
           DGS Battery
@@ -259,7 +264,7 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
             </DialogButton>
           </Focusable>
         </div>
-      </Focusable>
+      </div>
       )}
     </div>
   )
