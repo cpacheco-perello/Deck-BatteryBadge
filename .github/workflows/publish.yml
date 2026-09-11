@@ -28,7 +28,7 @@ jobs:
         id: prepare
         run: |
           plugin_version=$(node -p "require('./package.json').version")
-          echo "plugin_name=decky-game-settings" >> $GITHUB_OUTPUT
+          echo "plugin_name=dgs-battery" >> $GITHUB_OUTPUT
           echo "plugin_version=${plugin_version:?}" >> $GITHUB_OUTPUT
 
       # Install dependencies
@@ -90,7 +90,7 @@ jobs:
           allowUpdates: false
           skipIfReleaseExists: true
           tag: ${{ steps.prepare.outputs.plugin_version }}
-          commit: master
+          commit: main
 
       # Generate latest development
       - name: Update Latest Release
@@ -105,5 +105,5 @@ jobs:
           removeArtifacts: true
           replacesArtifacts: true
           tag: latest
-          commit: master
+          commit: main
           prerelease: true
