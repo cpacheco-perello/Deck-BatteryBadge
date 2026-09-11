@@ -428,7 +428,7 @@ const PluginConfigView: React.FC<PluginConfigViewProps> = ({ onGoBack }) => {
         <PanelSection>
           <PanelSocialButton
             icon={<SiGithub fill='#f5f5f5' />}
-            url='https://github.com/cpacheco-perello/decky-game-settings-fork'
+            url='https://github.com/cpacheco-perello/Deck-BatteryBadge'
           >
             Plugin Source
           </PanelSocialButton>
