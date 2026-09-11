@@ -96,7 +96,7 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
     activeTdpWatts > 0 && expectedMinutesFromCustomTdp !== null
       ? expectedMinutesFromCustomTdp
       : summary.batteryLifeMinutes ?? expectedMinutesFromCustomTdp
-  const tone = getBatteryTone(colorMinutes)
+  const tone = getBatteryTone(colorMinutes, deviceBatteryCapacityWh)
 
   const openPerGameTdpModal = () => {
     if (isTrackerPriorityMode) {
