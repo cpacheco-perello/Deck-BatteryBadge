@@ -16,7 +16,11 @@ import { TextFieldModal } from './TextFieldModal'
 import { useGameIdentity } from '../../hooks/useGameIdentity'
 import { useGamePageVisibility } from '../../hooks/useGamePageVisibility'
 import { useBatteryTrackerTdp } from '../../hooks/useBatteryTrackerTdp'
-import { calculateEstimatedMinutesFromTdp, useDeviceBatteryProfile } from '../../hooks/useDeviceBatteryProfile'
+import {
+  calculateEstimatedMinutesFromDraw,
+  systemOverheadWatts,
+  useDeviceBatteryProfile,
+} from '../../hooks/useDeviceBatteryProfile'
 import {
   cardBaseStyle,
   collapsedCardBaseStyle,
@@ -76,8 +80,16 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   const activeTdpWatts = isTrackerPriorityMode
     ? (importedTdpWatts ?? 0)
     : (perGameTdpWatts ?? 0)
-  const tdpSourceLabel = isTrackerPriorityMode ? 'Battery Tracker' : 'per-game'
-  const expectedMinutesFromCustomTdp = calculateEstimatedMinutesFromTdp(deviceBatteryCapacityWh, activeTdpWatts)
+  // Battery Tracker samples voltage_now x current_now at BAT1, so its figure is
+  // already the whole machine's draw. A manual per-game figure is an APU TDP and
+  // is the only one that needs the rest of the system added to it.
+  const isMeasuredTotalDraw = isTrackerPriorityMode
+  const totalDrawWatts =
+    activeTdpWatts > 0 ? (isMeasuredTotalDraw ? activeTdpWatts : activeTdpWatts + systemOverheadWatts) : 0
+  const drawSourceLabel = isMeasuredTotalDraw
+    ? `${activeTdpWatts}W measured (Battery Tracker)`
+    : `${activeTdpWatts}W APU + ${systemOverheadWatts}W system`
+  const expectedMinutesFromCustomTdp = calculateEstimatedMinutesFromDraw(deviceBatteryCapacityWh, totalDrawWatts)
   // Colour the badge after whichever figure it actually leads with, so the tone
   // never disagrees with the number next to it.
   const colorMinutes =
@@ -303,7 +315,7 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
 
         {activeTdpWatts > 0 && (
           <div>
-            <div style={metricLabelStyle}>Expected @ {activeTdpWatts}W ({tdpSourceLabel})</div>
+            <div style={metricLabelStyle}>Expected at {drawSourceLabel}</div>
             <div style={{ ...metricValueStyle, fontSize: sizePreset.drawValueFontSize, lineHeight: '15px' }}>
               {expectedMinutesFromCustomTdp !== null
                 ? `${formatMinutes(expectedMinutesFromCustomTdp)}${deviceLabel ? ` (${deviceLabel})` : ''}`

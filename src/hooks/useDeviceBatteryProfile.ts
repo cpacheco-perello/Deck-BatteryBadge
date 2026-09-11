@@ -18,15 +18,20 @@ const resolveDeviceBatteryCapacityWh = (deviceLabel: string | null): number | nu
   return null
 }
 
-// TDP only covers the APU. The display, RAM, SSD, fan and wireless radios draw
-// power on top of it, and ignoring them inflated every estimate by roughly a
-// third. This is a flat allowance for that rest-of-system draw.
+// A manually entered TDP figure covers the APU alone, so the display, RAM, SSD,
+// fan and radios have to be allowed for on top of it. Add this ONLY to such a
+// figure. A reading measured at the battery already includes all of it, and
+// adding this to one of those double counts the rest of the system.
 export const systemOverheadWatts = 3.5
 
-export const calculateEstimatedMinutesFromTdp = (batteryWh: number | null, tdpWatts: number): number | null => {
+// Takes the total draw of the machine, not an APU figure. Callers decide
+// whether their number needs the overhead above added first.
+export const calculateEstimatedMinutesFromDraw = (
+  batteryWh: number | null,
+  totalDrawWatts: number
+): number | null => {
   if (batteryWh === null || !Number.isFinite(batteryWh) || batteryWh <= 0) return null
-  if (!Number.isFinite(tdpWatts) || tdpWatts <= 0) return null
-  const totalDrawWatts = tdpWatts + systemOverheadWatts
+  if (!Number.isFinite(totalDrawWatts) || totalDrawWatts <= 0) return null
   const minutes = Math.round((batteryWh / totalDrawWatts) * 60)
   return minutes > 0 ? minutes : null
 }
