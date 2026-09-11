@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { DialogButton, Focusable, Navigation, showModal } from '@decky/ui'
+import { Button, DialogButton, Navigation, showModal } from '@decky/ui'
 import { MdBattery5Bar } from 'react-icons/md'
 import {
   batteryBadgeAverageTdpRange,
@@ -30,7 +30,6 @@ import {
   metricValueStyle,
   secondaryTextStyle,
   sizePresets,
-  titleRowStyle,
 } from './gameBatteryBadge/theme'
 
 type GameBatteryBadgeProps = {
@@ -232,14 +231,29 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
     background: `linear-gradient(135deg, rgba(12, 18, 30, 0.95) 0%, ${tone.bgAccent} 100%)`,
   }
 
-  const collapsedCardStyle: React.CSSProperties = {
+  // ProtonDB's badge is reachable with the gamepad because its clickable part is
+  // a real Steam button, not a Focusable wrapper. Steam builds its navigation
+  // graph from those, so this is what makes an absolutely positioned badge
+  // reachable at all. Everything else here is chrome around that button.
+  const readingButtonStyle: React.CSSProperties = {
     ...collapsedCardBaseStyle,
     padding: sizePreset.collapsedPadding,
     fontSize: sizePreset.collapsedFontSize,
     color: tone.metricColor,
-    border: `1px solid ${tone.border}`,
-    background: `linear-gradient(135deg, rgba(12, 18, 30, 0.95) 0%, ${tone.bgAccent} 100%)`,
+    minWidth: 0,
+    width: isExpanded ? '100%' : undefined,
+    justifyContent: isExpanded ? 'flex-start' : 'center',
+    borderRadius: isExpanded ? '6px' : '999px',
+    border: isExpanded ? '1px solid transparent' : `1px solid ${tone.border}`,
+    background: isExpanded
+      ? 'rgba(255, 255, 255, 0.06)'
+      : `linear-gradient(135deg, rgba(12, 18, 30, 0.95) 0%, ${tone.bgAccent} 100%)`,
+    boxShadow: isExpanded ? 'none' : '0 4px 14px rgba(0, 0, 0, 0.4)',
   }
+
+  // While collapsed the button is the whole badge, so the wrapper adds nothing.
+  // The container already carries the screen-aware max width.
+  const wrapperStyle: React.CSSProperties = isExpanded ? cardStyle : { display: 'flex' }
 
   // Focus moving between the card and its own buttons fires a blur on the
   // container. Only collapse when focus actually leaves the badge.
@@ -262,28 +276,17 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
   return (
     <div ref={setBadgeNode} style={containerStyle}>
       {shouldHideBadge ? null : (
-      // One Focusable for the whole badge, mounted in both states. It is the
-      // focus target while collapsed, and while expanded the two DialogButtons
-      // inside are focus targets of their own. Keeping the same node across the
-      // switch is what stops focus being lost and the badge oscillating.
-      <Focusable
-        style={isExpanded ? cardStyle : collapsedCardStyle}
-        flow-children='vertical'
-        onFocus={() => setIsExpanded(true)}
-        onBlur={handleBadgeBlur}
-      >
-        {!isExpanded ? (
-          <>
-            <MdBattery5Bar size={14} color={tone.iconColor} />
-            {compactText}
-          </>
-        ) : (
-          <>
-        <div style={{ ...titleRowStyle, fontSize: sizePreset.titleFontSize, color: tone.titleColor }}>
+      <div style={wrapperStyle} onFocus={() => setIsExpanded(true)} onBlur={handleBadgeBlur}>
+        {/* Always mounted, in both states. It is the badge while collapsed and
+            the card's header once expanded, so the focused node is never torn
+            down mid-transition and the badge cannot oscillate. */}
+        <Button style={readingButtonStyle} onClick={() => setIsExpanded((previous) => !previous)}>
           <MdBattery5Bar size={14} color={tone.iconColor} />
-          DGS Battery
-        </div>
+          <span>{isExpanded ? `DGS Battery  ${compactText}` : compactText}</span>
+        </Button>
 
+        {!isExpanded ? null : (
+          <>
         <div>
           <div style={metricLabelStyle}>Estimated Battery Life</div>
           <div style={{ ...metricValueStyle, fontSize: sizePreset.metricValueFontSize, color: tone.metricColor }}>
@@ -338,7 +341,7 @@ const GameBatteryBadge: React.FC<GameBatteryBadgeProps> = () => {
         </div>
           </>
         )}
-      </Focusable>
+      </div>
       )}
     </div>
   )
